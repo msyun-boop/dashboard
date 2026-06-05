@@ -298,7 +298,8 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <button class="nb on" onclick="showTab('kanban')" id="nt-kanban"><i class="ti ti-layout-kanban"></i> 할일 보드</button>
   <button class="nb" onclick="showTab('cal')" id="nt-cal"><i class="ti ti-calendar"></i> 캘린더</button>
   <button class="nb" onclick="showTab('quote')" id="nt-quote"><i class="ti ti-send"></i> 견적 업체</button>
-  <button class="nb" onclick="showTab('prospect')" id="nt-prospect"><i class="ti ti-building-store"></i> 가망업체</button>
+  <button class="nb" onclick="showTab('prospect')" id="nt-prospect"><i class="ti ti-building-store"></i> 신규 가망</button>
+  <button class="nb" onclick="showTab('reprospec')" id="nt-reprospec"><i class="ti ti-refresh"></i> 재계약 가망</button>
 </div>
 
 <div class="content">
@@ -406,13 +407,24 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
     </div>
   </div>
 
-  <!-- 가망업체 -->
+  <!-- 신규 가망 -->
   <div id="v-prospect" class="hidden">
-    <div class="sechdr"><i class="ti ti-building-store"></i> 가망업체 <button class="wa" onclick="document.getElementById('pedit-id').value='';document.getElementById('mprospect-title').innerHTML='<i class=\'ti ti-building-store\'></i> 가망업체 추가';document.getElementById('mprospect-btn').textContent='추가';['pco','pct','pmemo','pdt'].forEach(x=>document.getElementById(x).value='');openM('mprospect')"><i class="ti ti-plus"></i> 추가</button></div>
+    <div class="sechdr"><i class="ti ti-building-store"></i> 신규 가망 <button class="wa" onclick="document.getElementById('pedit-id').value='';document.getElementById('mprospect-title').innerHTML='<i class=\'ti ti-building-store\'></i> 신규 가망 추가';document.getElementById('mprospect-btn').textContent='추가';['pco','pct','pmemo','pdt','pcamp'].forEach(x=>document.getElementById(x).value='');document.getElementById('pcamp-stage').value='';openM('mprospect')"><i class="ti ti-plus"></i> 추가</button></div>
     <div class="tbl-wrap">
       <table class="tbl">
         <thead><tr><th>업체명</th><th>담당자</th><th>상태</th><th>캠페인 제안</th><th>최근 메모</th><th>최근연락</th><th></th></tr></thead>
         <tbody id="ptbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 재계약 가망 -->
+  <div id="v-reprospec" class="hidden">
+    <div class="sechdr"><i class="ti ti-refresh"></i> 재계약 가망 <button class="wa" onclick="openAddReProspect()"><i class="ti ti-plus"></i> 추가</button></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>업체명</th><th>담당자</th><th>상태</th><th>캠페인 제안</th><th>최근 메모</th><th>최근연락</th><th></th></tr></thead>
+        <tbody id="rptbody"></tbody>
       </table>
     </div>
   </div>
@@ -477,6 +489,15 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <label>업체명</label><input id="qco" type="text" placeholder="업체명">
   <label>견적 내용</label><input id="qcont" type="text" placeholder="블로그 체험단 30명 패키지">
   <label>금액</label><input id="qamt" type="text" placeholder="1,500,000" oninput="fmtAmt(this)">
+  <label>구분</label>
+  <div style="display:flex;gap:10px;margin-top:4px">
+    <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;cursor:pointer;padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);flex:1;justify-content:center" id="qtype-new-lbl">
+      <input type="radio" name="qtype" id="qtype-new" value="new" checked onchange="updateQTypeLbl()" style="accent-color:var(--green)"> 🆕 신규
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px;cursor:pointer;padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);flex:1;justify-content:center" id="qtype-re-lbl">
+      <input type="radio" name="qtype" id="qtype-re" value="re" onchange="updateQTypeLbl()" style="accent-color:#6366F1"> 🔄 재계약
+    </label>
+  </div>
   <label>메모 (어떤 내용으로 보낼지)</label>
   <textarea id="qmemo" rows="2" placeholder="이전 미팅에서 인스타도 관심 있다고 함"></textarea>
   <div class="mbtns">
@@ -511,6 +532,35 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <div class="mbtns">
     <button class="bcl" onclick="closeM('mprospect')">취소</button>
     <button class="bok" id="mprospect-btn" onclick="doAddProspect()">추가</button>
+  </div>
+</div></div>
+
+<!-- 재계약 가망 모달 -->
+<div id="mreprospec" class="overlay hidden">
+<div class="mbox">
+  <h3 id="mreprospec-title"><i class="ti ti-refresh"></i> 재계약 가망 추가</h3>
+  <input type="hidden" id="rpedit-id" value="">
+  <label>업체명</label><input id="rpco" type="text" placeholder="업체명">
+  <label>담당자</label><input id="rpct" type="text" placeholder="담당자 이름">
+  <label>상태</label>
+  <select id="rpst"><option>가망</option><option>계약</option><option>보류</option></select>
+  <label>캠페인 제안명</label>
+  <input id="rpcamp" type="text" placeholder="블로그 체험단 30명 패키지">
+  <label>제안 단계</label>
+  <select id="rpcamp-stage">
+    <option value="">-- 선택 --</option>
+    <option value="propose">📤 제안중</option>
+    <option value="review">🔍 검토중</option>
+    <option value="accept">✅ 수락</option>
+    <option value="contract">🤝 계약완료</option>
+    <option value="reject">❌ 거절</option>
+  </select>
+  <label>첫 메모</label>
+  <textarea id="rpmemo" rows="2" placeholder="이전 계약 내용, 재계약 논의 사항"></textarea>
+  <label>최근 연락일</label><input id="rpdt" type="date">
+  <div class="mbtns">
+    <button class="bcl" onclick="closeM('mreprospec')">취소</button>
+    <button class="bok" id="mreprospec-btn" onclick="doAddReProspect()">추가</button>
   </div>
 </div></div>
 
@@ -550,7 +600,10 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
     <i class="ti ti-send"></i><span>견적</span>
   </button>
   <button class="bnb" onclick="showTab('prospect')" id="bnt-prospect">
-    <i class="ti ti-building-store"></i><span>가망</span>
+    <i class="ti ti-building-store"></i><span>신규</span>
+  </button>
+  <button class="bnb" onclick="showTab('reprospec')" id="bnt-reprospec">
+    <i class="ti ti-refresh"></i><span>재계약</span>
   </button>
 </div>
 <!-- Firebase SDK -->
@@ -586,6 +639,7 @@ let cards = [], nid = 1;
 let calEvents = [], neid = 1;
 let quotes = [], nqid = 1;
 let prospects = [], npid = 1;
+let reProspects = [], nrpid = 1;
 
 let saveTimer = null;
 function persist() {
@@ -593,7 +647,7 @@ function persist() {
   saveTimer = setTimeout(async () => {
     try {
       isLocalSave = true;
-      await DOC_REF.set({ cards, nid, calEvents, neid, quotes, nqid, prospects, npid });
+      await DOC_REF.set({ cards, nid, calEvents, neid, quotes, nqid, prospects, npid, reProspects, nrpid });
       setTimeout(() => { isLocalSave = false; }, 1000);
     } catch(e) { console.error('저장 실패:', e); isLocalSave = false; }
   }, 600);
@@ -611,10 +665,12 @@ DOC_REF.onSnapshot((snap) => {
   calEvents = d.calEvents || []; neid = d.neid || 1;
   quotes = d.quotes || []; nqid = d.nqid || 1;
   prospects = d.prospects || []; npid = d.npid || 1;
+  reProspects = d.reProspects || []; nrpid = d.nrpid || 1;
   if (curTab==='kanban') rKanban();
   if (curTab==='cal') rCal();
   if (curTab==='quote') rQuotes();
   if (curTab==='prospect') rProspects();
+  if (curTab==='reprospec') rReProspects();
   renderBanner();
 });
 
@@ -711,7 +767,7 @@ function closeBanner() {
 
 // ── 탭 ──
 function showTab(t) {
-  ['kanban','cal','quote','prospect'].forEach(x => {
+  ['kanban','cal','quote','prospect','reprospec'].forEach(x => {
     document.getElementById('v-'+x).classList.add('hidden');
     document.getElementById('nt-'+x).classList.remove('on');
     const b = document.getElementById('bnt-'+x);
@@ -738,6 +794,7 @@ function showTab(t) {
   if (t==='cal') rCal();
   if (t==='quote') rQuotes();
   if (t==='prospect') rProspects();
+  if (t==='reprospec') rReProspects();
 }
 
 // ── 칸반 ──
@@ -1367,21 +1424,32 @@ function delCalEvent(id) {
 }
 
 // ── 견적 ──
+function updateQTypeLbl() {
+  const isNew = document.getElementById('qtype-new').checked;
+  document.getElementById('qtype-new-lbl').style.borderColor = isNew ? 'var(--green)' : 'var(--border)';
+  document.getElementById('qtype-new-lbl').style.background  = isNew ? 'var(--green-light)' : '';
+  document.getElementById('qtype-re-lbl').style.borderColor  = isNew ? 'var(--border)' : '#6366F1';
+  document.getElementById('qtype-re-lbl').style.background   = isNew ? '' : '#EEF2FF';
+}
+
 function doAddQuote() {
   const co = document.getElementById('qco').value.trim(); if (!co) return;
   const editId = document.getElementById('qedit-id').value;
+  const qtype = document.querySelector('input[name="qtype"]:checked').value; // 'new' or 're'
   if (editId) {
     const q = quotes.find(x => x.id === parseInt(editId)); if (!q) return;
     q.company = co; q.content = document.getElementById('qcont').value;
     q.amount = document.getElementById('qamt').value; q.memo = document.getElementById('qmemo').value;
+    q.quoteType = qtype;
   } else {
     quotes.push({ id: nqid++, company: co,
       content: document.getElementById('qcont').value, amount: document.getElementById('qamt').value,
-      memo: document.getElementById('qmemo').value, sent: false });
+      memo: document.getElementById('qmemo').value, sent: false, quoteType: qtype });
   }
   ['qco','qcont','qamt','qmemo'].forEach(x => document.getElementById(x).value = '');
   persist(); closeM('mquote'); rQuotes();
 }
+
 function openEditQuote(id) {
   const q = quotes.find(x => x.id === id); if (!q) return;
   document.getElementById('qedit-id').value = id;
@@ -1391,30 +1459,50 @@ function openEditQuote(id) {
   document.getElementById('qcont').value = q.content || '';
   document.getElementById('qamt').value = q.amount || '';
   document.getElementById('qmemo').value = q.memo || '';
+  // quoteType 복원
+  const isRe = q.quoteType === 're';
+  document.getElementById('qtype-new').checked = !isRe;
+  document.getElementById('qtype-re').checked  = isRe;
+  updateQTypeLbl();
   openM('mquote');
 }
+
 function delQuote(id) {
   if (!confirm('견적 업체를 삭제할까요?')) return;
   quotes = quotes.filter(x => x.id !== id);
   persist(); rQuotes();
 }
+
 function togQuoteSent(id) {
   const q = quotes.find(x => x.id === id); if (!q) return;
   q.sent = !q.sent;
   if (q.sent) {
     q.sentDate = todayStr;
-    // 가망업체에 이미 같은 업체가 없으면 자동 복사 (견적은 유지)
-    const already = prospects.find(p => p.company === q.company);
-    if (!already) {
-      prospects.push({ id: npid++, company: q.company, contact: '', status: '가망',
-        memo: `견적: ${q.content||''} ${q.amount||''}${q.memo?' / '+q.memo:''}`.trim(),
-        date: todayStr, logs: [] });
-      showToast(`"${q.company}" 발송 완료 → 가망업체에 자동 추가!`);
+    const isRe = q.quoteType === 're';
+    const memo = `견적: ${q.content||''} ${q.amount||''}${q.memo?' / '+q.memo:''}`.trim();
+    if (isRe) {
+      // 재계약 가망으로 이동
+      const already = reProspects.find(p => p.company === q.company);
+      if (!already) {
+        reProspects.push({ id: nrpid++, company: q.company, contact: '', status: '가망',
+          memo, date: todayStr, logs: [] });
+        showToast(`"${q.company}" 발송 완료 → 재계약 가망에 자동 추가!`);
+      }
+      persist(); rQuotes(); rReProspects();
+    } else {
+      // 신규 가망으로 이동
+      const already = prospects.find(p => p.company === q.company);
+      if (!already) {
+        prospects.push({ id: npid++, company: q.company, contact: '', status: '가망',
+          memo, date: todayStr, logs: [] });
+        showToast(`"${q.company}" 발송 완료 → 신규 가망에 자동 추가!`);
+      }
+      persist(); rQuotes(); rProspects();
     }
   } else {
     q.sentDate = null;
+    persist(); rQuotes();
   }
-  persist(); rQuotes(); rProspects();
 }
 function moveToProspect(qid) {
   const q = quotes.find(x => x.id === qid); if (!q) return;
@@ -1448,7 +1536,9 @@ function rQuotes() {
         style="width:17px;height:17px;accent-color:var(--green);cursor:pointer"
         title="${q.sent?'발송 완료':'미발송'}">
     </td>
-    <td><b style="font-weight:600;${q.sent?'text-decoration:line-through;color:var(--text2)':''}">${esc(q.company)}</b></td>
+    <td><b style="font-weight:600;${q.sent?'text-decoration:line-through;color:var(--text2)':''}">${esc(q.company)}</b>
+      <span style="margin-left:5px;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;${q.quoteType==='re'?'background:#EEF2FF;color:#6366F1':'background:var(--green-light);color:#065F46'}">${q.quoteType==='re'?'🔄재계약':'🆕신규'}</span>
+    </td>
     <td title="${esc(q.content)}">${esc(q.content)||'-'}</td>
     <td>${fmtAmtDisplay(q.amount)}</td>
     <td style="white-space:nowrap">
@@ -1478,7 +1568,7 @@ function fmtAmtDisplay(raw) {
 }
 
 // ── 가망업체 ──
-let curLogPid = null;
+let curLogPid = null, curLogType = 'prospect';
 
 function doAddProspect() {
   const co = document.getElementById('pco').value.trim(); if (!co) return;
@@ -1522,7 +1612,18 @@ function delProspect(id) { prospects = prospects.filter(x => x.id !== id); persi
 
 function openLog(pid) {
   curLogPid = pid;
+  curLogType = 'prospect';
   const p = prospects.find(x => x.id === pid); if (!p) return;
+  document.getElementById('mlog-title').textContent = p.company + ' 소통 로그';
+  renderLogList(p);
+  document.getElementById('log-input').value = '';
+  openM('mlog');
+}
+
+function openRLog(pid) {
+  curLogPid = pid;
+  curLogType = 'reprospec';
+  const p = reProspects.find(x => x.id === pid); if (!p) return;
   document.getElementById('mlog-title').textContent = p.company + ' 소통 로그';
   renderLogList(p);
   document.getElementById('log-input').value = '';
@@ -1550,7 +1651,8 @@ function renderLogList(p) {
 
 function addLog() {
   const text = document.getElementById('log-input').value.trim(); if (!text) return;
-  const p = prospects.find(x => x.id === curLogPid); if (!p) return;
+  const list = curLogType === 'reprospec' ? reProspects : prospects;
+  const p = list.find(x => x.id === curLogPid); if (!p) return;
   if (!p.logs) p.logs = [];
   p.logs.push({
     type: document.getElementById('log-type').value,
@@ -1560,7 +1662,117 @@ function addLog() {
   });
   p.date = todayStr;
   document.getElementById('log-input').value = '';
-  persist(); renderLogList(p); rProspects();
+  persist(); renderLogList(p);
+  if (curLogType === 'reprospec') rReProspects(); else rProspects();
+}
+
+// ── 재계약 가망 ──
+function openAddReProspect() {
+  document.getElementById('rpedit-id').value = '';
+  document.getElementById('mreprospec-title').innerHTML = '<i class="ti ti-refresh"></i> 재계약 가망 추가';
+  document.getElementById('mreprospec-btn').textContent = '추가';
+  ['rpco','rpct','rpmemo','rpdt','rpcamp'].forEach(x => document.getElementById(x).value = '');
+  document.getElementById('rpcamp-stage').value = '';
+  openM('mreprospec');
+}
+
+function openEditReProspect(id) {
+  const p = reProspects.find(x => x.id === id); if (!p) return;
+  document.getElementById('rpedit-id').value = id;
+  document.getElementById('mreprospec-title').innerHTML = '<i class="ti ti-pencil"></i> 재계약 가망 수정';
+  document.getElementById('mreprospec-btn').textContent = '저장';
+  document.getElementById('rpco').value = p.company;
+  document.getElementById('rpct').value = p.contact || '';
+  document.getElementById('rpst').value = p.status || '가망';
+  document.getElementById('rpmemo').value = '';
+  document.getElementById('rpdt').value = p.date || '';
+  document.getElementById('rpcamp').value = p.camp || '';
+  document.getElementById('rpcamp-stage').value = p.campStage || '';
+  openM('mreprospec');
+}
+
+function doAddReProspect() {
+  const co = document.getElementById('rpco').value.trim(); if (!co) return;
+  const editId = document.getElementById('rpedit-id').value;
+  if (editId) {
+    const p = reProspects.find(x => x.id === parseInt(editId)); if (!p) return;
+    p.company = co; p.contact = document.getElementById('rpct').value;
+    p.status = document.getElementById('rpst').value; p.date = document.getElementById('rpdt').value;
+    p.camp = document.getElementById('rpcamp').value;
+    p.campStage = document.getElementById('rpcamp-stage').value;
+  } else {
+    const initMemo = document.getElementById('rpmemo').value.trim();
+    const logs = initMemo ? [{ type:'memo', text: initMemo, date: todayStr, time: new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) }] : [];
+    reProspects.push({ id: nrpid++, company: co, contact: document.getElementById('rpct').value,
+      status: document.getElementById('rpst').value, logs,
+      camp: document.getElementById('rpcamp').value,
+      campStage: document.getElementById('rpcamp-stage').value,
+      date: document.getElementById('rpdt').value });
+  }
+  ['rpco','rpct','rpmemo','rpdt','rpcamp'].forEach(x => document.getElementById(x).value = '');
+  document.getElementById('rpcamp-stage').value = '';
+  persist(); closeM('mreprospec'); rReProspects();
+}
+
+function delReProspect(id) {
+  if (!confirm('재계약 가망 업체를 삭제할까요?')) return;
+  reProspects = reProspects.filter(x => x.id !== id);
+  persist(); rReProspects();
+}
+
+function chRPS(id, st) {
+  const p = reProspects.find(x => x.id === id);
+  if (p) { p.status = st; persist(); rReProspects(); }
+}
+
+function chRCampStage(id, stage) {
+  const p = reProspects.find(x => x.id === id);
+  if (p) { p.campStage = stage; persist(); rReProspects(); }
+}
+
+function rReProspects() {
+  const trCls  = { 가망:'tr-prospect', 계약:'tr-contract', 보류:'tr-hold' };
+  const ssCls  = { 가망:'ss-prospect', 계약:'ss-contract', 보류:'ss-hold' };
+  const stageCls = { propose:'camp-propose', review:'camp-review', accept:'camp-accept', contract:'camp-contract', reject:'camp-reject' };
+  document.getElementById('rptbody').innerHTML = reProspects.map(p => {
+    const lastLog = p.logs && p.logs.length ? p.logs[p.logs.length-1] : null;
+    const lastMemo = lastLog ? `${LOG_ICON[lastLog.type]||'📝'} ${esc(lastLog.text).slice(0,30)}${lastLog.text.length>30?'…':''}` : (esc(p.memo)||'-');
+    const tc = trCls[p.status] || 'tr-hold';
+    const sc = ssCls[p.status] || 'ss-hold';
+    const campHtml = p.camp
+      ? `<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.camp)}">${esc(p.camp)}</div>
+         <select class="camp-stage-select ${stageCls[p.campStage]||'camp-propose'}" onchange="chRCampStage(${p.id},this.value)" style="font-size:11px;padding:3px 6px;border-radius:8px;border:1.5px solid;cursor:pointer;font-weight:700;width:100%;max-width:130px">
+           <option value="propose" ${p.campStage==='propose'?'selected':''}>📤 제안중</option>
+           <option value="review"  ${p.campStage==='review' ?'selected':''}>🔍 검토중</option>
+           <option value="accept"  ${p.campStage==='accept' ?'selected':''}>✅ 수락</option>
+           <option value="contract"${p.campStage==='contract'?'selected':''}>🤝 계약완료</option>
+           <option value="reject"  ${p.campStage==='reject' ?'selected':''}>❌ 거절</option>
+         </select>`
+      : `<button onclick="openEditReProspect(${p.id})" style="font-size:11px;padding:3px 9px;border-radius:8px;border:1px dashed var(--border2);background:transparent;color:var(--text3);cursor:pointer">+ 캠페인 입력</button>`;
+    return `<tr class="${tc}">
+      <td><b style="font-weight:600">${esc(p.company)}</b></td>
+      <td>${esc(p.contact)||'-'}</td>
+      <td>
+        <select class="status-select ${sc}" onchange="chRPS(${p.id},this.value)">
+          <option value="가망" ${p.status==='가망'?'selected':''}>가망</option>
+          <option value="계약" ${p.status==='계약'?'selected':''}>계약</option>
+          <option value="보류" ${p.status==='보류'?'selected':''}>보류</option>
+        </select>
+      </td>
+      <td style="min-width:140px">${campHtml}</td>
+      <td style="max-width:180px">
+        <div style="font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMemo}</div>
+        <button onclick="openRLog(${p.id})" style="margin-top:4px;font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--blue);cursor:pointer">
+          <i class="ti ti-messages" style="font-size:11px"></i> 로그 ${p.logs&&p.logs.length?`(${p.logs.length})`:''}
+        </button>
+      </td>
+      <td style="font-size:13px">${p.date||'-'}</td>
+      <td style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        <button class="delbtn" onclick="openEditReProspect(${p.id})">수정</button>
+        <button class="delbtn" onclick="delReProspect(${p.id})">삭제</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text2)">재계약 가망 업체가 없어요</td></tr>`;
 }
 
 function chCampStage(id, stage) {
