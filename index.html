@@ -188,7 +188,19 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .cal-popup-close:hover{background:var(--bg2)}
 .cal-popup-item{font-size:11px;padding:4px 7px;border-radius:6px;margin-bottom:3px;cursor:pointer;font-weight:500;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .cal-popup-item:hover{opacity:.8}
-@media(max-width:768px){.calcell{padding:3px 4px}.dn{font-size:11px}.cev{font-size:9px;padding:1px 3px;border-radius:3px}.calwrap{height:calc(100vh - 130px)}.cal-grid-wrap{overflow-y:auto}}
+@media(max-width:768px){
+  .cal-grid-wrap{overflow:hidden;display:flex;flex-direction:column}
+  .calgrid{grid-template-columns:repeat(7,minmax(0,1fr));width:100%;min-width:0;height:100%;flex:1}
+  .caldl{font-size:10px;padding:4px 0;letter-spacing:0}
+  .calcell{padding:2px 2px;min-height:68px;overflow:hidden}
+  .dn{font-size:11px;margin-bottom:2px}
+  .cev{font-size:9px;padding:1px 3px;border-radius:3px;margin-bottom:1px;line-height:1.3}
+  .cev-label{font-size:9px}
+  .cev-btns{display:none!important}
+  .cev-more{font-size:9px;padding:1px 3px}
+  .holi-lbl{display:none}
+  .calwrap{height:calc(100vh - 130px)}
+}
 
 /* CRM 테이블 — 꽉 채우기 */
 .sechdr{font-size:15px;font-weight:700;padding:12px 16px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);background:var(--surface);font-family:'Space Grotesk',sans-serif}
@@ -647,7 +659,7 @@ function persist() {
   saveTimer = setTimeout(async () => {
     try {
       isLocalSave = true;
-      await DOC_REF.set({ cards, nid, calEvents, neid, quotes, nqid, prospects, npid, reProspects, nrpid });
+      await DOC_REF.set({ cards, nid, calEvents, neid, quotes, nqid, prospects, npid, reProspects, nrpid, followups: window._followups||[] });
       setTimeout(() => { isLocalSave = false; }, 1000);
     } catch(e) { console.error('저장 실패:', e); isLocalSave = false; }
   }, 600);
@@ -666,6 +678,7 @@ DOC_REF.onSnapshot((snap) => {
   quotes = d.quotes || []; nqid = d.nqid || 1;
   prospects = d.prospects || []; npid = d.npid || 1;
   reProspects = d.reProspects || []; nrpid = d.nrpid || 1;
+  window._followups = d.followups || [];
   if (curTab==='kanban') rKanban();
   if (curTab==='cal') rCal();
   if (curTab==='quote') rQuotes();
@@ -711,17 +724,31 @@ function renderBanner() {
   const m = String(TD.getMonth()+1).padStart(2,'0');
   const d = String(TD.getDate()).padStart(2,'0');
   const dateStr = `${TD.getFullYear()}년 ${m}월 ${d}일 (${DAYS[TD.getDay()]})`;
-
-  // 우상단 날짜 텍스트
   const dtxt = document.getElementById('banner-date-text');
   if (dtxt) dtxt.textContent = dateStr;
-  // 제목 옆 뱃지 (선택적)
   const badge = document.getElementById('banner-date-badge');
   if (badge) badge.textContent = dateStr;
 
   const todayCards = cards.filter(c => c.date === todayStr && !c.done);
   const todayEvts = calEvents.filter(e => e.start <= todayStr && e.end >= todayStr);
+
+  // 오늘 팔로업 알림
+  const todayFollowups = (window._followups || []).filter(f => f.date === todayStr);
+
   let html = '';
+
+  // 팔로업 알림 섹션
+  if (todayFollowups.length) {
+    html += `<div class="banner-section">
+      <div class="banner-section-label"><i class="ti ti-bell" style="font-size:13px;color:#F59E0B"></i> 팔로업 알림</div>
+      <div class="banner-row">`;
+    todayFollowups.forEach(f => {
+      html += `<div class="bi-event" style="background:#F59E0B;color:#fff">
+        D+${f.days} · ${esc(f.company)} — 컨택할 때가 됐어요!
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
 
   if (todayEvts.length) {
     html += `<div class="banner-section">
@@ -746,7 +773,7 @@ function renderBanner() {
     html += `</div></div>`;
   }
 
-  if (!todayCards.length && !todayEvts.length) {
+  if (!todayCards.length && !todayEvts.length && !todayFollowups.length) {
     html += `<span class="banner-empty">오늘 등록된 할일이나 일정이 없어요 🙂</span>`;
   }
   document.getElementById('banner-body').innerHTML = html;
@@ -1473,29 +1500,38 @@ function delQuote(id) {
   persist(); rQuotes();
 }
 
+function addFollowupTasks(company, sentDate) {
+  // 팔로업 날짜 정보만 저장 (할일 카드 생성 안 함 — 배너에 알림만 표시)
+  if (!window._followups) window._followups = [];
+  [3, 7, 10].forEach(days => {
+    const d = new Date(sentDate);
+    d.setDate(d.getDate() + days);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dup = window._followups.find(f => f.company === company && f.days === days);
+    if (!dup) window._followups.push({ company, days, date: ds, sentDate });
+  });
+}
+
 function togQuoteSent(id) {
   const q = quotes.find(x => x.id === id); if (!q) return;
   q.sent = !q.sent;
   if (q.sent) {
     q.sentDate = todayStr;
+    addFollowupTasks(q.company, todayStr);
     const isRe = q.quoteType === 're';
     const memo = `견적: ${q.content||''} ${q.amount||''}${q.memo?' / '+q.memo:''}`.trim();
     if (isRe) {
-      // 재계약 가망으로 이동
       const already = reProspects.find(p => p.company === q.company);
       if (!already) {
-        reProspects.push({ id: nrpid++, company: q.company, contact: '', status: '가망',
-          memo, date: todayStr, logs: [] });
-        showToast(`"${q.company}" 발송 완료 → 재계약 가망에 자동 추가!`);
+        reProspects.push({ id: nrpid++, company: q.company, contact: '', status: '가망', memo, date: todayStr, logs: [] });
+        showToast(`"${q.company}" 발송 → 재계약 가망 추가 + 팔로업 D+3/7/10 생성!`);
       }
       persist(); rQuotes(); rReProspects();
     } else {
-      // 신규 가망으로 이동
       const already = prospects.find(p => p.company === q.company);
       if (!already) {
-        prospects.push({ id: npid++, company: q.company, contact: '', status: '가망',
-          memo, date: todayStr, logs: [] });
-        showToast(`"${q.company}" 발송 완료 → 신규 가망에 자동 추가!`);
+        prospects.push({ id: npid++, company: q.company, contact: '', status: '가망', memo, date: todayStr, logs: [] });
+        showToast(`"${q.company}" 발송 → 신규 가망 추가 + 팔로업 D+3/7/10 생성!`);
       }
       persist(); rQuotes(); rProspects();
     }
@@ -1503,6 +1539,8 @@ function togQuoteSent(id) {
     q.sentDate = null;
     persist(); rQuotes();
   }
+  if (curTab === 'kanban') rKanban();
+  renderBanner();
 }
 function moveToProspect(qid) {
   const q = quotes.find(x => x.id === qid); if (!q) return;
