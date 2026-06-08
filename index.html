@@ -71,7 +71,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 /* 왼쪽: 오늘 일정+할일 */
 .banner-left{flex:1;min-width:0;padding-right:20px}
 .banner-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:var(--text);margin-bottom:12px;font-family:'Space Grotesk',sans-serif}
-.banner-date-badge{font-size:13px;font-weight:700;color:var(--green);background:var(--green-light);padding:4px 12px;border-radius:20px;margin-left:2px}
+.banner-date-badge{font-size:13px;font-weight:700;color:var(--green);background:var(--green-light);padding:4px 12px;border-radius:20px;margin-left:2px;margin-bottom:10px;display:inline-block}
 .banner-section{margin-bottom:9px}
 .banner-section-label{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:5px}
 .banner-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -1234,7 +1234,7 @@ function rCal() {
     </div>`;
 
     // 캘린더 이벤트 (최대 2개 표시)
-    const MAX_VISIBLE = 2;
+    const MAX_VISIBLE = 1;
     const allItems = [];
     de.forEach(ev => {
       const bg = CAT_BG[ev.cat] || '#1D9E75';
@@ -1273,10 +1273,11 @@ function rCal() {
 
     el.innerHTML = html;
 
-    if (hidden.length > 0) {
+    // 일정이 1개 이상이면 항상 더보기 버튼 표시
+    if (allItems.length > 0) {
       const moreBtn = document.createElement('div');
       moreBtn.className = 'cev-more';
-      moreBtn.textContent = `+${hidden.length}개 더보기`;
+      moreBtn.textContent = hidden.length > 0 ? `+${hidden.length}개 더보기` : '전체보기';
       el.appendChild(moreBtn);
       moreBtn.addEventListener('click', e => {
         e.stopPropagation();
