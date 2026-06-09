@@ -302,6 +302,23 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 <body>
 
 <div id="ghost"></div>
+
+<!-- 로그인 화면 -->
+<div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);gap:24px;padding:24px">
+  <div style="text-align:center">
+    <div style="font-size:48px;margin-bottom:8px">📋</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:#047857;margin-bottom:6px">업무 대시보드</div>
+    <div style="font-size:14px;color:var(--text2)">구글 계정으로 로그인하면 각자의 데이터가 분리되어 저장됩니다</div>
+  </div>
+  <button onclick="googleLogin()" style="display:flex;align-items:center;gap:12px;padding:14px 28px;border-radius:14px;border:2px solid var(--border);background:white;cursor:pointer;font-size:15px;font-weight:700;color:#111;box-shadow:0 4px 16px rgba(0,0,0,.08);transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 6px 24px rgba(0,0,0,.14)'" onmouseout="this.style.boxShadow='0 4px 16px rgba(0,0,0,.08)'">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px;height:24px">
+    Google 계정으로 로그인
+  </button>
+  <div style="font-size:12px;color:var(--text3)">아이즈커뮤니케이션즈 / 리뷰플레이스 전용</div>
+</div>
+
+<!-- 앱 본체 -->
+<div id="app-root" style="display:none">
 <div id="toast"></div>
 
 <!-- 네비 -->
@@ -312,6 +329,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <button class="nb" onclick="showTab('quote')" id="nt-quote"><i class="ti ti-send"></i> 견적 업체</button>
   <button class="nb" onclick="showTab('prospect')" id="nt-prospect"><i class="ti ti-building-store"></i> 신규 가망</button>
   <button class="nb" onclick="showTab('reprospec')" id="nt-reprospec"><i class="ti ti-refresh"></i> 재계약 가망</button>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px" id="nav-user-info"></div>
 </div>
 
 <div class="content">
@@ -621,6 +639,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyC_zuSnAsBUinM9prCVELqEqGBtPvXG1D8",
@@ -632,7 +651,11 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const DOC_REF = db.collection('dashboard').doc('main');
+const auth = firebase.auth();
+
+let DOC_REF = null;
+let currentUser = null;
+let unsubSnapshot = null;
 
 const TD = new Date();
 const todayStr = `${TD.getFullYear()}-${String(TD.getMonth()+1).padStart(2,'0')}-${String(TD.getDate()).padStart(2,'0')}`;
@@ -655,6 +678,7 @@ let reProspects = [], nrpid = 1;
 
 let saveTimer = null;
 function persist() {
+  if (!DOC_REF) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
@@ -667,24 +691,71 @@ function persist() {
 
 let isLocalSave = false;
 
-// 실시간 동기화 — 다른 기기 변경사항만 반영
-DOC_REF.onSnapshot((snap) => {
-  if (isLocalSave) return; // 내가 저장한 거면 무시
-  if (!snap.exists) return;
-  const d = snap.data();
-  if (!d) return;
-  cards = d.cards || []; nid = d.nid || 1;
-  calEvents = d.calEvents || []; neid = d.neid || 1;
-  quotes = d.quotes || []; nqid = d.nqid || 1;
-  prospects = d.prospects || []; npid = d.npid || 1;
-  reProspects = d.reProspects || []; nrpid = d.nrpid || 1;
-  window._followups = d.followups || [];
-  if (curTab==='kanban') rKanban();
-  if (curTab==='cal') rCal();
-  if (curTab==='quote') rQuotes();
-  if (curTab==='prospect') rProspects();
-  if (curTab==='reprospec') rReProspects();
-  renderBanner();
+function setupUserData(user) {
+  currentUser = user;
+  DOC_REF = db.collection('users').doc(user.uid).collection('data').doc('main');
+
+  // 기존 리스너 해제
+  if (unsubSnapshot) unsubSnapshot();
+
+  // 실시간 동기화
+  unsubSnapshot = DOC_REF.onSnapshot((snap) => {
+    if (isLocalSave) return;
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (!d) return;
+    cards = d.cards || []; nid = d.nid || 1;
+    calEvents = d.calEvents || []; neid = d.neid || 1;
+    quotes = d.quotes || []; nqid = d.nqid || 1;
+    prospects = d.prospects || []; npid = d.npid || 1;
+    reProspects = d.reProspects || []; nrpid = d.nrpid || 1;
+    window._followups = d.followups || [];
+    if (curTab==='kanban') rKanban();
+    if (curTab==='cal') rCal();
+    if (curTab==='quote') rQuotes();
+    if (curTab==='prospect') rProspects();
+    if (curTab==='reprospec') rReProspects();
+    renderBanner();
+  });
+
+  // 유저 정보 네비에 표시
+  const userInfo = document.getElementById('nav-user-info');
+  if (userInfo) {
+    userInfo.innerHTML = `
+      <img src="${user.photoURL||''}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid var(--green)" onerror="this.style.display='none'">
+      <span style="font-size:13px;font-weight:600;color:var(--text)">${user.displayName||user.email}</span>
+      <button onclick="signOut()" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-weight:600">로그아웃</button>`;
+  }
+
+  // 로그인 화면 숨기고 앱 표시
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-root').style.display = '';
+  initData();
+}
+
+function signOut() {
+  auth.signOut().then(() => {
+    document.getElementById('login-screen').style.display = '';
+    document.getElementById('app-root').style.display = 'none';
+    currentUser = null; DOC_REF = null;
+  });
+}
+
+function googleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => {
+    alert('로그인 실패: ' + e.message);
+  });
+}
+
+// Auth 상태 감지
+auth.onAuthStateChanged(user => {
+  if (user) {
+    setupUserData(user);
+  } else {
+    document.getElementById('login-screen').style.display = '';
+    document.getElementById('app-root').style.display = 'none';
+  }
 });
 
 async function initData() {
@@ -697,6 +768,8 @@ async function initData() {
       calEvents = d.calEvents || []; neid = d.neid || 1;
       quotes = d.quotes || []; nqid = d.nqid || 1;
       prospects = d.prospects || []; npid = d.npid || 1;
+      reProspects = d.reProspects || []; nrpid = d.nrpid || 1;
+      window._followups = d.followups || [];
     }
   } catch(e) { console.error('불러오기 실패:', e); }
   showLoading(false);
@@ -1946,10 +2019,9 @@ function tick() {
 tick();
 setInterval(tick, 1000);
 
-// ── 시작 ──
-initData();
-
 </script>
+
+</div><!-- /app-root -->
 
 </body>
 </html>
