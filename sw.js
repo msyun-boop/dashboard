@@ -1,4 +1,4 @@
-const CACHE = 'dashboard-v2';
+const CACHE = 'dashboard-v3-calendar-expanded';
 const ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',

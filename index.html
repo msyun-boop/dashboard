@@ -141,8 +141,8 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .section-divider{border:none;border-top:1px solid var(--border)}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 
-/* 캘린더 — 꽉 채우기 */
-.calwrap{display:flex;flex-direction:column;height:calc(100vh - 110px)}
+/* 캘린더 — 일정 전체 펼침 */
+.calwrap{display:flex;flex-direction:column;min-height:calc(100vh - 110px);height:auto}
 .caltop{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;flex-shrink:0}
 .calnav{display:flex;align-items:center;gap:8px}
 .calnav button{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 11px;cursor:pointer;color:var(--text2);font-size:13px;box-shadow:var(--shadow-sm)}
@@ -151,10 +151,10 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .cal-add-btn{padding:6px 14px;border-radius:20px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(16,185,129,.25)}
 .cal-add-btn:hover{background:var(--green-dark)}
 .calhint{font-size:11px;color:var(--text3)}
-.cal-grid-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--border);border-top:1px solid var(--border);flex:1;height:100%}
+.cal-grid-wrap{overflow:visible;display:block;flex:none}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(80px,auto);border-left:1px solid var(--border);border-top:1px solid var(--border);height:auto}
 .caldl{text-align:center;font-size:11px;font-weight:700;color:var(--text2);padding:6px 0;background:var(--bg2);border-right:1px solid var(--border);border-bottom:1px solid var(--border);letter-spacing:.5px}
-.calcell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 5px;cursor:pointer;background:var(--surface);transition:background .1s;user-select:none;position:relative;overflow:hidden;min-height:80px}
+.calcell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 5px;cursor:pointer;background:var(--surface);transition:background .1s;user-select:none;position:relative;overflow:visible;min-height:80px}
 .calcell:hover{background:var(--bg)}
 .calcell.today{background:#F0FDF9}
 .calcell.today .dn{color:var(--green);font-weight:800}
@@ -179,27 +179,17 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .cev.p1{background:var(--red-light);color:#991B1B}
 .cev.p2{background:var(--blue-light);color:#1E40AF}
 .cev.p3{background:var(--amber-light);color:#92400E}
-.cev-more{font-size:10px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;cursor:pointer;font-weight:600;display:inline-block;margin-bottom:2px}
-.cev-more:hover{background:var(--border2)}
-/* +N 팝업 */
-.cal-popup{position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;padding:12px;min-width:180px;max-width:240px}
-.cal-popup-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.cal-popup-close{background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:0 2px;border-radius:4px}
-.cal-popup-close:hover{background:var(--bg2)}
-.cal-popup-item{font-size:11px;padding:4px 7px;border-radius:6px;margin-bottom:3px;cursor:pointer;font-weight:500;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.cal-popup-item:hover{opacity:.8}
 @media(max-width:768px){
-  .cal-grid-wrap{overflow:hidden;display:flex;flex-direction:column}
-  .calgrid{grid-template-columns:repeat(7,minmax(0,1fr));width:100%;min-width:0;height:100%;flex:1}
+  .cal-grid-wrap{overflow:visible;display:block}
+  .calgrid{grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(68px,auto);width:100%;min-width:0;height:auto}
   .caldl{font-size:10px;padding:4px 0;letter-spacing:0}
-  .calcell{padding:2px 2px;min-height:68px;overflow:hidden}
+  .calcell{padding:2px 2px;min-height:68px;overflow:visible}
   .dn{font-size:11px;margin-bottom:2px}
   .cev{font-size:9px;padding:1px 3px;border-radius:3px;margin-bottom:1px;line-height:1.3}
   .cev-label{font-size:9px}
   .cev-btns{display:none!important}
-  .cev-more{font-size:9px;padding:1px 3px}
   .holi-lbl{display:none}
-  .calwrap{height:calc(100vh - 130px)}
+  .calwrap{min-height:calc(100vh - 130px);height:auto}
 }
 
 /* CRM 테이블 — 꽉 채우기 */
@@ -1227,38 +1217,6 @@ function getHolidays(year) {
 }
 
 // ── 캘린더 ──
-let calPopupTimer = null;
-function closeCalPopup() {
-  const p = document.getElementById('cal-popup');
-  if (p) p.remove();
-}
-
-function showCalPopup(items, x, y) {
-  closeCalPopup();
-  const popup = document.createElement('div');
-  popup.id = 'cal-popup';
-  popup.className = 'cal-popup';
-  popup.innerHTML = `<div class="cal-popup-title">
-    <span>일정 전체보기</span>
-    <button class="cal-popup-close" onclick="closeCalPopup()"><i class="ti ti-x"></i></button>
-  </div>` + items.map(item => item.html).join('');
-
-  // 화면 범위 보정
-  document.body.appendChild(popup);
-  const pw = popup.offsetWidth, ph = popup.offsetHeight;
-  const wx = window.innerWidth, wy = window.innerHeight;
-  let lx = x + 8, ly = y + 8;
-  if (lx + pw > wx - 10) lx = wx - pw - 10;
-  if (ly + ph > wy - 10) ly = wy - ph - 10;
-  popup.style.left = lx + 'px';
-  popup.style.top = ly + 'px';
-}
-
-document.addEventListener('click', e => {
-  const popup = document.getElementById('cal-popup');
-  if (popup && !popup.contains(e.target) && !e.target.closest('.cev-more')) closeCalPopup();
-});
-
 function rCal() {
   document.getElementById('callabel').textContent = `${cY}년 ${cM+1}월`;
   const grid = document.getElementById('calgrid');
@@ -1306,8 +1264,7 @@ function rCal() {
       ${d}${holiday ? `<span style="font-size:9px;margin-left:2px;color:#E24B4A;font-weight:600">${holiday}</span>` : ''}
     </div>`;
 
-    // 캘린더 이벤트 (최대 2개 표시)
-    const MAX_VISIBLE = 1;
+    // 캘린더 이벤트와 날짜 지정 할일을 모두 날짜 칸 안에 바로 표시
     const allItems = [];
     de.forEach(ev => {
       const bg = CAT_BG[ev.cat] || '#1D9E75';
@@ -1315,12 +1272,6 @@ function rCal() {
       allItems.push({
         type: 'event',
         id: ev.id,
-        html: `<div style="display:flex;align-items:center;gap:3px;margin-bottom:3px">
-          <div class="cal-popup-item" style="background:${bg};color:white;flex:1;min-width:0;cursor:pointer" title="${esc(ev.title)}" onclick="openEditCalEvent(${ev.id});closeCalPopup()">${CAT_LABEL[ev.cat]||''} ${esc(ev.title)}</div>
-          <button onclick="addCalEvToKanban(${ev.id},'p1');closeCalPopup()" style="flex-shrink:0;font-size:10px;padding:2px 5px;border-radius:5px;border:1px solid #FCA5A5;background:#FEE2E2;color:#991B1B;cursor:pointer;font-weight:700" title="우선순위1">1</button>
-          <button onclick="addCalEvToKanban(${ev.id},'p2');closeCalPopup()" style="flex-shrink:0;font-size:10px;padding:2px 5px;border-radius:5px;border:1px solid #93C5FD;background:#EFF6FF;color:#1E40AF;cursor:pointer;font-weight:700" title="우선순위2">2</button>
-          <button onclick="addCalEvToKanban(${ev.id},'p3');closeCalPopup()" style="flex-shrink:0;font-size:10px;padding:2px 5px;border-radius:5px;border:1px solid #FCD34D;background:#FFFBEB;color:#92400E;cursor:pointer;font-weight:700" title="추후업무">후</button>
-        </div>`,
         cellHtml: `<div class="cev" style="background:${bg};color:white;opacity:.9" title="${esc(ev.title)}" draggable="true" data-evid="${ev.id}">
           <span class="cev-label" onclick="openEditCalEvent(${ev.id})">${showLabel ? (CAT_LABEL[ev.cat]||'') + ' ' + esc(ev.title) : '&nbsp;'}</span>
           <span class="cev-btns">
@@ -1335,28 +1286,12 @@ function rCal() {
       allItems.push({
         type: 'card',
         id: c.id,
-        html: `<div class="cal-popup-item ${c.pri}" style="margin-bottom:3px" title="${esc(c.title)}">${esc(c.title)}</div>`,
         cellHtml: `<div class="cev ${c.pri}" title="${esc(c.title)}">${esc(c.title)}</div>`
       });
     });
 
-    const visible = allItems.slice(0, MAX_VISIBLE);
-    const hidden = allItems.slice(MAX_VISIBLE);
-    visible.forEach(item => { html += item.cellHtml; });
-
+    allItems.forEach(item => { html += item.cellHtml; });
     el.innerHTML = html;
-
-    // 일정이 1개 이상이면 항상 더보기 버튼 표시
-    if (allItems.length > 0) {
-      const moreBtn = document.createElement('div');
-      moreBtn.className = 'cev-more';
-      moreBtn.textContent = hidden.length > 0 ? `+${hidden.length}개 더보기` : '전체보기';
-      el.appendChild(moreBtn);
-      moreBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        showCalPopup(allItems, e.clientX, e.clientY);
-      });
-    }
 
     // 캘린더 이벤트 → 칸반 드래그
     el.querySelectorAll('.cev[data-evid]').forEach(cev => {
@@ -1372,7 +1307,7 @@ function rCal() {
 
     // 셀 mousedown/mouseover/mouseup — 날짜 범위 선택
     el.addEventListener('mousedown', e => {
-      if (e.target.closest('.cev') || e.target.closest('.cev-more')) return;
+      if (e.target.closest('.cev')) return;
       isSelecting = true; rangeStart = ds; rangeEnd = ds; highlightRange();
     });
     el.addEventListener('mouseover', () => {
