@@ -180,8 +180,8 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .cev.p2{background:var(--blue-light);color:#1E40AF}
 .cev.p3{background:var(--amber-light);color:#92400E}
 @media(max-width:768px){
-  .cal-grid-wrap{overflow:visible;display:block}
-  .calgrid{grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(68px,auto);width:100%;min-width:0;height:auto}
+  .cal-grid-wrap{overflow-x:auto;overflow-y:visible;display:block;-webkit-overflow-scrolling:touch}
+  .calgrid{grid-template-columns:repeat(7,minmax(100px,1fr));grid-auto-rows:minmax(68px,auto);width:700px;min-width:700px;height:auto}
   .caldl{font-size:10px;padding:4px 0;letter-spacing:0}
   .calcell{padding:2px 2px;min-height:68px;overflow:visible}
   .dn{font-size:11px;margin-bottom:2px}
@@ -191,6 +191,10 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   .holi-lbl{display:none}
   .calwrap{min-height:calc(100vh - 130px);height:auto}
 }
+.cal-more{width:100%;border:0;border-radius:4px;padding:3px 5px;background:#E8F7F1;color:#087A5B;font-size:10px;font-weight:800;cursor:pointer;text-align:center}
+.cal-more:hover{background:#D2F0E5}
+.day-items-list{display:flex;flex-direction:column;gap:7px;max-height:60vh;overflow-y:auto}
+.day-item{border:0;border-radius:8px;padding:9px 11px;color:#fff;font:600 12px inherit;text-align:left;cursor:pointer}
 
 /* CRM 테이블 — 꽉 채우기 */
 .sechdr{font-size:15px;font-weight:700;padding:12px 16px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);background:var(--surface);font-family:'Space Grotesk',sans-serif}
@@ -499,6 +503,14 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
     <button class="bcl" onclick="closeM('mcalevent')">취소</button>
     <button class="bok" id="mcal-btn" onclick="doAddCalEvent()">추가</button>
   </div>
+</div></div>
+
+<!-- 날짜별 전체 일정 모달 -->
+<div id="mdayitems" class="overlay hidden">
+<div class="mbox">
+  <h3 id="mdayitems-title"><i class="ti ti-list"></i> 전체 일정</h3>
+  <div id="mdayitems-list" class="day-items-list"></div>
+  <div class="mbtns"><button class="bcl" onclick="closeM('mdayitems')">닫기</button></div>
 </div></div>
 
 <!-- 견적 모달 -->
@@ -1290,7 +1302,10 @@ function rCal() {
       });
     });
 
-    allItems.forEach(item => { html += item.cellHtml; });
+    allItems.slice(0, 4).forEach(item => { html += item.cellHtml; });
+    if (allItems.length > 4) {
+      html += `<button class="cal-more" onclick="event.stopPropagation();openDayItems('${ds}')">전체보기 (${allItems.length}개)</button>`;
+    }
     el.innerHTML = html;
 
     // 캘린더 이벤트 → 칸반 드래그
@@ -1364,6 +1379,32 @@ function rCal() {
     el.innerHTML = `<div class="dn">${i}</div>`;
     grid.appendChild(el);
   }
+}
+
+function openDayItems(ds) {
+  const dayEvents = calEvents.filter(e => e.start <= ds && e.end >= ds);
+  const dayCards = cards.filter(c => c.date === ds && !c.done && !c.fromCal);
+  const list = document.getElementById('mdayitems-list');
+  document.getElementById('mdayitems-title').innerHTML = `<i class="ti ti-list"></i> ${ds} 전체 일정`;
+  list.innerHTML = '';
+
+  dayEvents.forEach(ev => {
+    const btn = document.createElement('button');
+    btn.className = 'day-item';
+    btn.style.background = CAT_BG[ev.cat] || '#1D9E75';
+    btn.textContent = `${CAT_LABEL[ev.cat] || ''} ${ev.title}`.trim();
+    btn.onclick = () => { closeM('mdayitems'); openEditCalEvent(ev.id); };
+    list.appendChild(btn);
+  });
+  dayCards.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'day-item';
+    btn.style.background = c.pri === 'p1' ? '#E85D5D' : c.pri === 'p2' ? '#4A7FDB' : '#F5A623';
+    btn.textContent = c.title;
+    btn.onclick = () => { closeM('mdayitems'); openEditCard(c.id); };
+    list.appendChild(btn);
+  });
+  openM('mdayitems');
 }
 
 function highlightRange() {

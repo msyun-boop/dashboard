@@ -1,4 +1,4 @@
-const CACHE = 'dashboard-v3-calendar-expanded';
+const CACHE = 'dashboard-v4-four-items';
 const ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
@@ -20,6 +20,18 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE).then(cache => cache.put('/dashboard/index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('/dashboard/index.html'))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/dashboard/index.html')))
   );
