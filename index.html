@@ -310,6 +310,32 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   body.calendar-active .cev{font-size:11px;padding:2px 6px;line-height:1.3;margin-bottom:2px}
   body.calendar-active .cal-more{padding:2px 5px}
 }
+
+/* Mobile calendar: all seven days and all weeks above the existing bottom navigation. */
+@media(max-width:768px){
+  body.calendar-active .content{padding-bottom:0}
+  body.calendar-active .calwrap{height:calc(100vh - var(--cal-top,0px) - var(--cal-bottom,58px))!important;height:calc(100dvh - var(--cal-top,0px) - var(--cal-bottom,58px))!important;min-height:0}
+  body.calendar-active .caltop{padding:7px 10px;gap:5px}
+  body.calendar-active .calmonth{font-size:17px}
+  body.calendar-active .calnav{gap:6px}
+  body.calendar-active .calnav button{padding:3px 10px;font-size:12px}
+  body.calendar-active .cal-add-btn{padding:5px 10px;font-size:11px}
+  body.calendar-active .calhint{font-size:9px}
+  body.calendar-active .cal-grid-wrap{flex:1;min-height:0;overflow:visible}
+  body.calendar-active .calgrid{width:100%;min-width:0;height:100%;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:23px repeat(var(--cal-weeks,5),minmax(0,1fr));grid-auto-rows:unset}
+  body.calendar-active .caldl{padding:5px 0;font-size:10px}
+  body.calendar-active .calcell{min-width:0;min-height:0;padding:2px}
+  body.calendar-active .dn{font-size:11px;margin-bottom:3px}
+  body.calendar-active .cev{font-size:9px;padding:1px 2px;line-height:1.2;margin-bottom:1px}
+  body.calendar-active .cev-label{font-size:inherit}
+  body.calendar-active .cal-more{display:block;white-space:nowrap;font-size:clamp(6px,1.8vw,8px);line-height:1.2;padding:2px 0}
+}
+@media(max-width:768px) and (max-height:650px){
+  body.calendar-active .caltop{padding:4px 8px;gap:3px}
+  body.calendar-active .dn{font-size:10px;margin-bottom:2px}
+  body.calendar-active .cev{font-size:8px;padding:.5px 1px;line-height:1.15}
+  body.calendar-active .cal-more{padding:1px 0}
+}
 </style>
 </head>
 <body>
@@ -1251,13 +1277,17 @@ function getHolidays(year) {
 // ── 캘린더 ──
 function fitCalendarViewport() {
   const wrap = document.querySelector('.calwrap');
-  if (curTab !== 'cal' || !wrap || window.innerWidth <= 768) return;
+  if (curTab !== 'cal' || !wrap) return;
   // Include any actual header height and keep the calculation independent of scroll position.
   wrap.style.setProperty('--cal-top', (wrap.getBoundingClientRect().top + window.scrollY) + 'px');
+  const bottomNav = document.querySelector('.bottom-nav');
+  wrap.style.setProperty('--cal-bottom', (bottomNav ? bottomNav.getBoundingClientRect().height : 0) + 'px');
 }
 window.addEventListener('resize', fitCalendarViewport);
 if ('ResizeObserver' in window) {
-  new ResizeObserver(fitCalendarViewport).observe(document.querySelector('.nav'));
+  const calendarResizeObserver = new ResizeObserver(fitCalendarViewport);
+  calendarResizeObserver.observe(document.querySelector('.nav'));
+  calendarResizeObserver.observe(document.querySelector('.bottom-nav'));
 }
 
 function rCal() {
