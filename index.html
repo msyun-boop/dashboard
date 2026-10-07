@@ -291,6 +291,25 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 }
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:9px 20px;border-radius:24px;font-size:12px;font-weight:600;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 #ghost{position:absolute;pointer-events:none;opacity:0;padding:7px 11px;background:var(--surface);border:2px solid var(--green);border-radius:10px;font-size:12px;font-weight:600;color:var(--text);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;top:-999px;left:-999px;box-shadow:var(--shadow)}
+
+/* Desktop calendar: distribute the available viewport height across this month's weeks. */
+@media(min-width:769px){
+  body.calendar-active .nav{padding:10px 24px}
+  body.calendar-active .nb{padding:7px 20px;font-size:14px}
+  body.calendar-active .nav-logo{font-size:20px}
+  body.calendar-active .calwrap{height:calc(100vh - var(--cal-top,60px))!important;height:calc(100dvh - var(--cal-top,60px))!important;min-height:0}
+  body.calendar-active .caltop{padding:7px 16px;gap:6px}
+  body.calendar-active .calmonth{font-size:17px}
+  body.calendar-active .calnav button{padding:3px 11px}
+  body.calendar-active .cal-add-btn{padding:5px 14px}
+  body.calendar-active .cal-grid-wrap{flex:1;min-height:0}
+  body.calendar-active .calgrid{height:100%;grid-template-rows:26px repeat(var(--cal-weeks,5),minmax(0,1fr));grid-auto-rows:unset}
+  body.calendar-active .caldl{padding:5px 0}
+  body.calendar-active .calcell{min-height:0;padding:4px 5px}
+  body.calendar-active .dn{font-size:11px;margin-bottom:3px}
+  body.calendar-active .cev{font-size:11px;padding:2px 6px;line-height:1.3;margin-bottom:2px}
+  body.calendar-active .cal-more{padding:2px 5px}
+}
 </style>
 </head>
 <body>
@@ -880,6 +899,7 @@ function showTab(t) {
   const bt = document.getElementById('bnt-'+t);
   if (bt) bt.classList.add('on');
   curTab = t;
+  document.body.classList.toggle('calendar-active', t === 'cal');
 
   // 캘린더 탭: 배너 숨기고 캘린더 꽉 채우기
   const banner = document.getElementById('today-banner');
@@ -1229,6 +1249,17 @@ function getHolidays(year) {
 }
 
 // ── 캘린더 ──
+function fitCalendarViewport() {
+  const wrap = document.querySelector('.calwrap');
+  if (curTab !== 'cal' || !wrap || window.innerWidth <= 768) return;
+  // Include any actual header height and keep the calculation independent of scroll position.
+  wrap.style.setProperty('--cal-top', (wrap.getBoundingClientRect().top + window.scrollY) + 'px');
+}
+window.addEventListener('resize', fitCalendarViewport);
+if ('ResizeObserver' in window) {
+  new ResizeObserver(fitCalendarViewport).observe(document.querySelector('.nav'));
+}
+
 function rCal() {
   document.getElementById('callabel').textContent = `${cY}년 ${cM+1}월`;
   const grid = document.getElementById('calgrid');
@@ -1372,6 +1403,8 @@ function rCal() {
   // 다음달 빈칸 — 6행 고정이 아닌 필요한 만큼만 채우기
   const total = first + dim;
   const rows = Math.ceil(total / 7);
+  grid.style.setProperty('--cal-weeks', rows);
+  fitCalendarViewport();
   const rem = rows * 7 - total;
   for (let i = 1; i <= rem; i++) {
     const el = document.createElement('div');
