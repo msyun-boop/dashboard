@@ -167,6 +167,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 .dn-sat{color:var(--blue)!important}
 .holi-lbl{font-size:9px;color:var(--red);font-weight:600;margin-left:2px}
 .cev{font-size:12px;padding:3px 6px;border-radius:4px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:500;cursor:pointer;line-height:1.4;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:2px;position:relative}
+.cal-event-done .cal-event-title{text-decoration:line-through}
 .cev-label{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
 .cev-btns{display:none;gap:2px;flex-shrink:0}
 .cev:hover .cev-btns{display:flex}
@@ -552,6 +553,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <textarea id="ememo" rows="2" placeholder="추가 메모"></textarea>
   <div class="mbtns">
     <button id="mcal-del" class="hidden" style="padding:9px 16px;border-radius:20px;border:1.5px solid #FCA5A5;background:transparent;color:#EF4444;font-size:13px;cursor:pointer;margin-right:auto" onclick="delCalEventFromModal()"><i class="ti ti-trash" style="font-size:13px"></i> 삭제</button>
+    <button id="mcal-complete" class="hidden" style="padding:9px 16px;border-radius:20px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:13px;cursor:pointer" onclick="toggleCalEventDoneFromModal()">완료</button>
     <button class="bcl" onclick="closeM('mcalevent')">취소</button>
     <button class="bok" id="mcal-btn" onclick="doAddCalEvent()">추가</button>
   </div>
@@ -1153,6 +1155,7 @@ function bindDrag() {
         const cell = target ? target.closest('.calcell[data-date]') : null;
         if (cell && c) {
           document.getElementById('eedit-id').value = '';
+  document.getElementById('mcal-complete').classList.add('hidden');
           document.getElementById('mcal-title').innerHTML = '<i class="ti ti-calendar-plus"></i> 일정 추가';
           document.getElementById('mcal-btn').textContent = '추가';
           document.getElementById('eti').value = c.title;
@@ -1360,8 +1363,8 @@ function rCal() {
       allItems.push({
         type: 'event',
         id: ev.id,
-        cellHtml: `<div class="cev" style="background:${bg};color:white;opacity:.9" title="${esc(ev.title)}" draggable="true" data-evid="${ev.id}">
-          <span class="cev-label" onclick="openEditCalEvent(${ev.id})">${showLabel ? (CAT_LABEL[ev.cat]||'') + ' ' + esc(ev.title) : '&nbsp;'}</span>
+        cellHtml: `<div class="cev ${ev.done ? 'cal-event-done' : ''}" style="background:${bg};color:white;opacity:.9" title="${esc(ev.title)}" draggable="true" data-evid="${ev.id}">
+          <span class="cev-label" onclick="openEditCalEvent(${ev.id})">${showLabel ? (CAT_LABEL[ev.cat]||'') + ' <span class="cal-event-title">' + esc(ev.title) + '</span>' : '&nbsp;'}</span>
           <span class="cev-btns">
             <button class="cev-btn b1" onclick="event.stopPropagation();addCalEvToKanban(${ev.id},'p1')" title="우선순위1 추가">1</button>
             <button class="cev-btn b2" onclick="event.stopPropagation();addCalEvToKanban(${ev.id},'p2')" title="우선순위2 추가">2</button>
@@ -1430,6 +1433,7 @@ function rCal() {
         if (c) {
           // 일정 등록 모달 오픈 (카드 제목 자동 입력, 날짜 자동 세팅)
           document.getElementById('eedit-id').value = '';
+  document.getElementById('mcal-complete').classList.add('hidden');
           document.getElementById('mcal-title').innerHTML = '<i class="ti ti-calendar-plus"></i> 일정 추가';
           document.getElementById('mcal-btn').textContent = '추가';
           document.getElementById('eti').value = c.title;
@@ -1459,6 +1463,23 @@ function rCal() {
   }
 }
 
+function toggleCalEventDone(id) {
+  const ev = calEvents.find(x => x.id === id);
+  if (!ev) return;
+  ev.done = !ev.done;
+  persist();
+  rCal();
+}
+
+function toggleCalEventDoneFromModal() {
+  const id = parseInt(document.getElementById('eedit-id').value);
+  const ev = calEvents.find(x => x.id === id);
+  if (!ev) return;
+  toggleCalEventDone(id);
+  closeM('mcalevent');
+  showToast(ev.done ? '일정 완료' : '일정 완료 취소');
+}
+
 function openDayItems(ds) {
   const dayEvents = calEvents.filter(e => e.start <= ds && e.end >= ds);
   const dayCards = cards.filter(c => c.date === ds && !c.done && !c.fromCal);
@@ -1468,7 +1489,8 @@ function openDayItems(ds) {
 
   dayEvents.forEach(ev => {
     const btn = document.createElement('button');
-    btn.className = 'day-item';
+    btn.className = 'day-item cal-event-title';
+    btn.style.textDecoration = ev.done ? 'line-through' : 'none';
     btn.style.background = CAT_BG[ev.cat] || '#1D9E75';
     btn.textContent = `${CAT_LABEL[ev.cat] || ''} ${ev.title}`.trim();
     btn.onclick = () => { closeM('mdayitems'); openEditCalEvent(ev.id); };
@@ -1500,6 +1522,7 @@ function chM(dir) { cM += dir; if (cM > 11) { cM=0; cY++; } else if (cM < 0) { c
 
 function openCalAdd() {
   document.getElementById('eedit-id').value = '';
+  document.getElementById('mcal-complete').classList.add('hidden');
   document.getElementById('mcal-title').innerHTML = '<i class="ti ti-calendar-plus"></i> 일정 추가';
   document.getElementById('mcal-btn').textContent = '추가';
   document.getElementById('mcal-del').classList.add('hidden');
@@ -1509,6 +1532,7 @@ function openCalAdd() {
 }
 function openCalAddWithRange(s, e) {
   document.getElementById('eedit-id').value = '';
+  document.getElementById('mcal-complete').classList.add('hidden');
   document.getElementById('mcal-title').innerHTML = '<i class="ti ti-calendar-plus"></i> 일정 추가';
   document.getElementById('mcal-btn').textContent = '추가';
   document.getElementById('mcal-del').classList.add('hidden');
@@ -1525,6 +1549,9 @@ function openEditCalEvent(id) {
   document.getElementById('mcal-title').innerHTML = '<i class="ti ti-pencil"></i> 일정 수정';
   document.getElementById('mcal-btn').textContent = '저장';
   document.getElementById('mcal-del').classList.remove('hidden');
+  const completeBtn = document.getElementById('mcal-complete');
+  completeBtn.classList.remove('hidden');
+  completeBtn.textContent = ev.done ? '완료 취소' : '완료';
   document.getElementById('eti').value = ev.title;
   document.getElementById('esd').value = ev.start;
   document.getElementById('eed').value = ev.end;
@@ -1560,7 +1587,7 @@ function doAddCalEvent() {
   } else {
     // 신규 — 당일이면 p1, 나머지는 p3
     const evId = neid++;
-    calEvents.push({ id: evId, title: ti, start: sd, end: ed, cat, memo });
+    calEvents.push({ id: evId, title: ti, start: sd, end: ed, cat, memo, done: false });
     const pri = sd === todayStr ? 'p1' : 'p3';
     cards.push({ id: nid++, title: ti, date: sd, pri, done: false, subs: [], fromCal: evId });
   }
