@@ -1,8 +1,9 @@
-const CACHE = 'dashboard-v6-routine-preservation';
+const CACHE = 'dashboard-v7-weekly-schedules';
 const ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
-  '/dashboard/routines.js',
+  '/dashboard/routines.js?v=weekly-schedules',
+  '/dashboard/routines.css?v=weekly-schedules',
   '/dashboard/manifest.json',
   '/dashboard/icon-192.png',
   '/dashboard/icon-512.png'

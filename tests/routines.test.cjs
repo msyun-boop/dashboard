@@ -78,7 +78,7 @@ test('check-only saves preserve all routines and historical checks',async()=>{
   assert.equal(Object.hasOwn(h.writes[0].patch,'routines'),false);
 });
 test('editing a routine preserves check history and other routines',async()=>{
-  const h=harness();h.emit();h.run("editRoutine('r1')");await settle();
+  const h=harness();h.emit();h.run("saveRoutineEdit('r1','수정된 독서',[0,1,2,3,4,5,6],'2026-10-12')");await settle();
   assert.deepEqual(h.server.alice.checks,initial().checks);
   assert.equal(h.server.alice.routines.r1.name,'수정된 독서');
   assert.deepEqual(h.server.alice.routines.r2,initial().routines.r2);
@@ -168,4 +168,47 @@ test('an authoritative missing document replaces stale backup, keeping unsaved e
   h.emit({},false,false);
   assert.deepEqual(h.read('routineData.routines'),{});
   assert.equal(h.read("routineData.checks['r2_2026-10-12']"),true);
+});
+
+test('weekday schedules count only planned days and preserve excluded checks',()=>{
+  const data=initial();data.routines.r1.days=[0,1,2,3,4];data.checks['r1_2026-10-10']=true;
+  const h=harness({data});h.emit();
+  assert.deepEqual(h.read("routineStats('2026-10-05','r1')"),{done:1,total:5,pct:20});
+  assert.equal(h.run("routineActive(routineData.routines.r1,'2026-10-10')"),false);
+  assert.equal(h.read("routineData.checks['r1_2026-10-10']"),true);
+});
+test('editing selected past week updates goals immediately and roundtrips safely',async()=>{
+  const data=initial();data.checks['r1_2026-10-10']=true;
+  const h=harness({data});h.emit();
+  h.run("saveRoutineEdit('r1','독서',[0,1,2,3,4],'2026-10-05')");await settle();
+  assert.deepEqual(h.read("routineStats('2026-10-05','r1')"),{done:1,total:5,pct:20});
+  assert.deepEqual(h.read("routineStats('2026-09-28','r1')"),{done:0,total:0,pct:null});
+  assert.equal(h.server.alice.checks['r1_2026-10-10'],true);
+  assert.equal(Object.hasOwn(h.writes.at(-1).patch,'checks'),false);
+  h.run("saveRoutineEdit('r1','독서',[0,1,2,3,4,5,6],'2026-10-05')");await settle();
+  assert.deepEqual(h.read("routineStats('2026-10-05','r1')"),{done:2,total:7,pct:29});
+  assert.equal(h.server.alice.checks['r1_2026-10-10'],true);
+});
+test('same-week intermediate schedules are replaced while future schedules survive',async()=>{
+  const data=initial();data.routines.r1.start='2026-09-28';
+  data.routines.r1.schedule=[{from:'2026-10-07',days:[0,1,2,3,4]},{from:'2026-10-12',days:[5,6]}];
+  const h=harness({data});h.emit();
+  h.run("saveRoutineEdit('r1','독서',[0,1,2,3,4,5,6],'2026-10-05')");await settle();
+  assert.deepEqual(h.server.alice.routines.r1.schedule,[{from:'2026-10-05',days:[0,1,2,3,4,5,6]},{from:'2026-10-12',days:[5,6]}]);
+  assert.equal(h.read("routineStats('2026-09-28','r1').total"),7);
+  assert.equal(h.read("routineStats('2026-10-05','r1').total"),7);
+  assert.equal(h.read("routineStats('2026-10-12','r1').total"),2);
+});
+test('invalid empty weekday edits do not change any records',()=>{
+  const h=harness();h.emit();const before=h.read('routineData');
+  assert.equal(h.run("saveRoutineEdit('r1','독서',[],'2026-10-05')"),false);
+  assert.deepEqual(h.read('routineData'),before);assert.equal(h.writes.length,0);
+});
+test('month week labels and actual-day totals remain independent of selection',()=>{
+  const h=harness();h.emit();
+  assert.equal(h.run("routineWeekLabel('2026-10-05')"),'10월 1주차');
+  assert.equal(h.run("routineWeekLabel('2026-08-31')"),'8월 5주차');
+  assert.equal(h.run("routineWeekLabel('2027-01-04')"),'1월 1주차');
+  h.run("routineWeek='2026-10-05'");
+  assert.deepEqual(h.read("routineDailyStats(routineToday())"),{done:0,total:2,pct:0});
 });
