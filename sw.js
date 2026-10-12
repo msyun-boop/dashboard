@@ -1,7 +1,8 @@
-const CACHE = 'dashboard-v4-four-items';
+const CACHE = 'dashboard-v5-routines';
 const ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
+  '/dashboard/routines.js',
   '/dashboard/manifest.json',
   '/dashboard/icon-192.png',
   '/dashboard/icon-512.png'

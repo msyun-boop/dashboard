@@ -344,6 +344,9 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   body.calendar-active .cev{font-size:8px;padding:.5px 1px;line-height:1.15}
   body.calendar-active .cal-more{padding:1px 0}
 }
+
+.routine-page{max-width:1200px;margin:auto;padding:24px 20px 100px}.routine-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}.routine-page h2{color:var(--green-dark);margin-right:auto}.routine-page button{cursor:pointer;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:8px 12px;color:var(--text)}.routine-page button.primary{background:var(--green);color:white;border-color:var(--green)}.routine-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}.routine-scroll{overflow-x:auto}.routine-table{border-collapse:collapse;width:100%;min-width:760px}.routine-table th,.routine-table td{padding:12px 8px;border-bottom:1px solid var(--border);text-align:center}.routine-table th:first-child{text-align:left;min-width:190px}.routine-table input{width:22px;height:22px;accent-color:var(--green);cursor:pointer}.routine-table .today{background:#F0FDF9}.routine-name{overflow-wrap:anywhere}.routine-muted{color:var(--text2);font-size:12px;line-height:1.8}.routine-trend{display:flex;align-items:end;gap:12px;height:180px;min-width:550px}.routine-bar{flex:1;text-align:center;font-size:12px}.routine-bar-fill{background:var(--green);border-radius:6px 6px 0 0;min-height:2px;margin:6px auto;width:70%}.routine-page form{display:flex;gap:8px;flex-wrap:wrap}.routine-page input[type=text]{flex:1;min-width:160px;border:1px solid var(--border);border-radius:8px;padding:10px;font:inherit}.routine-status{min-height:22px;color:var(--green-dark)}
+@media(max-width:640px){.routine-page{padding:16px 12px 100px}.bnb span{font-size:10px}.routine-toolbar h2{width:100%}.routine-page button{padding:8px}.routine-table th,.routine-table td{padding:10px 6px}}
 </style>
 </head>
 <body>
@@ -373,6 +376,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <div class="nav-logo"><i class="ti ti-layout-dashboard"></i> 업무 대시보드</div>
   <button class="nb on" onclick="showTab('kanban')" id="nt-kanban"><i class="ti ti-layout-kanban"></i> 할일 보드</button>
   <button class="nb" onclick="showTab('cal')" id="nt-cal"><i class="ti ti-calendar"></i> 캘린더</button>
+  <button class="nb" onclick="showTab('routine')" id="nt-routine"><i class="ti ti-checkbox"></i> 하루 루틴</button>
   <button class="nb" onclick="showTab('quote')" id="nt-quote"><i class="ti ti-send"></i> 견적 업체</button>
   <button class="nb" onclick="showTab('prospect')" id="nt-prospect"><i class="ti ti-building-store"></i> 신규 가망</button>
   <button class="nb" onclick="showTab('reprospec')" id="nt-reprospec"><i class="ti ti-refresh"></i> 재계약 가망</button>
@@ -381,6 +385,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
 
 <div class="content">
 
+  <section id="v-routine" class="hidden routine-page" aria-label="하루 루틴"></section>
   <!-- 오늘 배너 -->
   <div id="today-banner" class="today-banner">
     <div class="banner-card">
@@ -682,6 +687,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
   <button class="bnb" onclick="showTab('cal')" id="bnt-cal">
     <i class="ti ti-calendar"></i><span>캘린더</span>
   </button>
+  <button class="bnb" onclick="showTab('routine')" id="bnt-routine"><i class="ti ti-checkbox"></i><span>루틴</span></button>
   <button class="bnb" onclick="showTab('quote')" id="bnt-quote">
     <i class="ti ti-send"></i><span>견적</span>
   </button>
@@ -692,6 +698,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Pretendard','Noto Sans KR'
     <i class="ti ti-refresh"></i><span>재계약</span>
   </button>
 </div>
+<script src="routines.js"></script>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -749,6 +756,7 @@ let isLocalSave = false;
 
 function setupUserData(user) {
   currentUser = user;
+  setupRoutines(user);
   DOC_REF = db.collection('users').doc(user.uid).collection('data').doc('main');
 
   // 기존 리스너 해제
@@ -790,6 +798,7 @@ function setupUserData(user) {
 }
 
 function signOut() {
+  stopRoutines();
   auth.signOut().then(() => {
     document.getElementById('login-screen').style.display = '';
     document.getElementById('app-root').style.display = 'none';
@@ -923,7 +932,7 @@ function closeBanner() {
 
 // ── 탭 ──
 function showTab(t) {
-  ['kanban','cal','quote','prospect','reprospec'].forEach(x => {
+  ['kanban','cal','routine','quote','prospect','reprospec'].forEach(x => {
     document.getElementById('v-'+x).classList.add('hidden');
     document.getElementById('nt-'+x).classList.remove('on');
     const b = document.getElementById('bnt-'+x);
@@ -939,7 +948,7 @@ function showTab(t) {
   // 캘린더 탭: 배너 숨기고 캘린더 꽉 채우기
   const banner = document.getElementById('today-banner');
   const calwrap = document.querySelector('.calwrap');
-  if (t === 'cal') {
+  if (t === 'cal' || t === 'routine') {
     if (banner && !bannerClosed) banner.style.display = 'none';
     if (calwrap) calwrap.style.height = 'calc(100vh - 46px)';
   } else {
@@ -947,6 +956,7 @@ function showTab(t) {
     if (calwrap) calwrap.style.height = '';
   }
 
+  if (t==='routine') rRoutine();
   if (t==='kanban') rKanban();
   if (t==='cal') rCal();
   if (t==='quote') rQuotes();
@@ -2084,7 +2094,7 @@ function showToast(msg) {
 // ── Service Worker 등록 ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
