@@ -15,9 +15,37 @@ function routineBackup(){try{localStorage.setItem(routineKey(),JSON.stringify({d
 function stopRoutines(){if(routineUnsub)routineUnsub();routineUnsub=null;routineRef=null;routineUid=null;routineReady=false;routineBusy=false;routineData={routines:{},checks:{}};routinePending={routines:{},checks:{}};}
 function setupRoutines(user){stopRoutines();routineUid=user.uid;routineWeek=monday(routineToday());routineMessage='연결 확인 중…';try{const cached=JSON.parse(localStorage.getItem(routineKey())||'null');if(cached){routineData=cached.data;routinePending=cached.pending;}}catch(e){routineMessage='기기 기록을 읽지 못했습니다';}
  routineRef=db.collection('users').doc(user.uid).collection('data').doc('routines-v1');const uid=user.uid;
- routineUnsub=routineRef.onSnapshot(snap=>{if(uid!==routineUid)return;const d=snap.exists?snap.data():{};routineData={routines:{...(d.routines||{}),...routinePending.routines},checks:{...(d.checks||{}),...routinePending.checks}};routineReady=true;routineMessage='동기화됨';routineBackup();rRoutine();flushRoutines();},e=>{if(uid!==routineUid)return;routineReady=false;routineMessage='클라우드 연결 실패 ('+e.code+') · 기기에 보관 중';rRoutine();});rRoutine();}
+ routineUnsub=routineRef.onSnapshot({includeMetadataChanges:true},snap=>{
+  if(uid!==routineUid)return;
+  const d=snap.exists?snap.data():{},fromCache=!!(snap.metadata&&snap.metadata.fromCache);
+  // Keep the device backup until an authoritative server snapshot arrives.
+  const base=fromCache?routineData:{routines:{},checks:{}};
+  routineData={routines:{...(d.routines||{}),...base.routines,...routinePending.routines},checks:{...(d.checks||{}),...base.checks,...routinePending.checks}};
+  routineReady=!fromCache;
+  routineMessage=fromCache?'기기 기록 유지 · 클라우드 연결 확인 중…':'동기화됨';
+  routineBackup();rRoutine();flushRoutines();
+ },e=>{if(uid!==routineUid)return;routineReady=false;routineMessage='클라우드 연결 실패 ('+e.code+') · 기기에 보관 중';rRoutine();});rRoutine();}
 function routinePatch(type,key,value){routineData[type][key]=value;routinePending[type][key]=value;routineMessage=routineBackup()?'기기에 저장됨 · 클라우드 저장 중…':routineMessage;rRoutine();flushRoutines();}
-async function flushRoutines(){if(!routineRef||!routineReady||routineBusy)return;const patch=JSON.parse(JSON.stringify(routinePending));if(!Object.keys(patch.routines).length&&!Object.keys(patch.checks).length)return;routineBusy=true;const ref=routineRef,uid=routineUid;try{await ref.set(patch,{merge:true});if(uid!==routineUid)return;for(const type of ['routines','checks'])for(const key of Object.keys(patch[type]))if(JSON.stringify(routinePending[type][key])===JSON.stringify(patch[type][key]))delete routinePending[type][key];routineMessage='클라우드 저장 완료';routineBackup();}catch(e){if(uid!==routineUid)return;routineMessage='클라우드 저장 실패 ('+e.code+') · 기기 기록 유지, 재시도하세요';}finally{if(uid===routineUid){routineBusy=false;rRoutine();}}if(uid===routineUid&&routineMessage==='클라우드 저장 완료')flushRoutines();}
+async function flushRoutines(){
+ if(!routineRef||!routineReady||routineBusy)return;
+ const patch=JSON.parse(JSON.stringify(routinePending));
+ // Firestore merge writes replace maps when an empty map is supplied.
+ // Omit untouched maps so checks and routine edits preserve each other's data.
+ const payload=Object.fromEntries(Object.entries(patch).filter(([,values])=>Object.keys(values).length));
+ if(!Object.keys(payload).length)return;
+ routineBusy=true;
+ const ref=routineRef,uid=routineUid;
+ try{
+  await ref.set(payload,{merge:true});
+  if(uid!==routineUid)return;
+  for(const type of ['routines','checks'])for(const key of Object.keys(patch[type]))if(JSON.stringify(routinePending[type][key])===JSON.stringify(patch[type][key]))delete routinePending[type][key];
+  routineMessage='클라우드 저장 완료';routineBackup();
+ }catch(e){
+  if(uid!==routineUid)return;
+  routineMessage='클라우드 저장 실패 ('+e.code+') · 기기 기록 유지, 재시도하세요';
+ }finally{if(uid===routineUid){routineBusy=false;rRoutine();}}
+ if(uid===routineUid&&routineMessage==='클라우드 저장 완료')flushRoutines();
+}
 function moveRoutineWeek(n){routineWeek=n===0?monday(routineToday()):dayShift(routineWeek,n*7);rRoutine();}
 function addRoutine(event){event.preventDefault();const input=document.getElementById('routine-new');const name=input.value.trim();if(!name)return;const id='r'+Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');routinePatch('routines',id,{name,start:routineWeek,end:null});}
 function editRoutine(id){const r=routineData.routines[id];const name=prompt('루틴 이름 수정',r.name);if(name&&name.trim())routinePatch('routines',id,{...r,name:name.trim().slice(0,120)});}

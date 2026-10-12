@@ -1,4 +1,4 @@
-const CACHE = 'dashboard-v5-routines';
+const CACHE = 'dashboard-v6-routine-preservation';
 const ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
