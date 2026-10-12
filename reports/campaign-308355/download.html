@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>캠페인 308355 결과보고서 ZIP 다운로드</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#f7f8fa;color:#202836;margin:0;display:grid;place-items:center;min-height:100vh}.card{width:min(460px,90vw);box-sizing:border-box;background:#fff;border:1px solid #e8eaee;border-radius:18px;padding:34px;box-shadow:0 12px 38px #0001}h1{font-size:23px}p{color:#647182;line-height:1.7}button{background:#eb4648;color:white;font-weight:bold;border:0;padding:16px 22px;font-size:17px;border-radius:10px;width:100%;cursor:pointer}button:disabled{opacity:.6}a{color:#d53e43}#status{font-size:13px;margin-top:15px}</style>
+<div class="card"><h1>인스타그램 결과보고서</h1><p>캠페인 308355 · 리뷰어 10명<br>아래 버튼을 누르면 HTML 보고서가 담긴 ZIP 압축파일을 내려받습니다.</p><button id="dl">ZIP 압축파일 다운로드</button><p id="status" role="status"></p><p><a href="./">다운로드 없이 보고서 보기 →</a></p></div>
+<script>
+document.getElementById('dl').addEventListener('click',async()=>{
+const button=document.getElementById('dl'),status=document.getElementById('status');
+button.disabled=true;status.textContent='압축파일을 생성하고 있습니다...';
+try{
+const response=await fetch('./index.html',{cache:'no-store'});if(!response.ok)throw new Error('보고서 파일 읽기 실패 ('+response.status+')');
+const data=new Uint8Array(await response.arrayBuffer());
+const name=new TextEncoder().encode('campaign-308355-instagram-report.html');
+let crc=0xffffffff;for(const b of data){crc^=b;for(let j=0;j<8;j++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}crc=(crc^0xffffffff)>>>0;
+const localSize=30+name.length+data.length,centralSize=46+name.length;
+const zipped=new Uint8Array(localSize+centralSize+22),v=new DataView(zipped.buffer),L=true;
+v.setUint32(0,0x04034b50,L);v.setUint16(4,20,L);v.setUint16(12,33,L);v.setUint32(14,crc,L);v.setUint32(18,data.length,L);v.setUint32(22,data.length,L);v.setUint16(26,name.length,L);
+zipped.set(name,30);zipped.set(data,30+name.length);
+let o=localSize;
+v.setUint32(o,0x02014b50,L);v.setUint16(o+4,20,L);v.setUint16(o+6,20,L);v.setUint16(o+14,33,L);v.setUint32(o+16,crc,L);v.setUint32(o+20,data.length,L);v.setUint32(o+24,data.length,L);v.setUint16(o+28,name.length,L);
+zipped.set(name,o+46);o+=centralSize;
+v.setUint32(o,0x06054b50,L);v.setUint16(o+8,1,L);v.setUint16(o+10,1,L);v.setUint32(o+12,centralSize,L);v.setUint32(o+16,localSize,L);
+const url=URL.createObjectURL(new Blob([zipped],{type:'application/zip'}));const a=document.createElement('a');a.href=url;a.download='campaign-308355-report.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='ZIP 다운로드를 시작했습니다. 브라우저 다운로드 목록을 확인하세요.';
+}catch(e){status.textContent='다운로드 생성 오류: '+e.message;}finally{button.disabled=false;}
+});
+</script></html>
