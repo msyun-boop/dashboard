@@ -1,0 +1,15 @@
+{
+  "id": "/dashboard/routine.html",
+  "name": "하루 루틴",
+  "short_name": "하루 루틴",
+  "description": "오늘 루틴 체크 · 주간 달성률 · 업무 대시보드와 기록 연동",
+  "start_url": "/dashboard/routine.html",
+  "scope": "/dashboard/",
+  "display": "standalone",
+  "background_color": "#F5F6FA",
+  "theme_color": "#10B981",
+  "icons": [
+    {"src": "/dashboard/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/dashboard/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

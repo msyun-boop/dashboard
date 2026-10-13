@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="하루 루틴">
+<meta name="theme-color" content="#10B981">
+<meta name="description" content="오늘의 하루 루틴을 빠르게 체크하고 기존 업무 대시보드와 기록을 함께 확인하세요.">
+<link rel="manifest" href="routine-manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="stylesheet" href="routine-mobile.css?v=mobile-routine">
+<title>하루 루틴</title>
+</head>
+<body>
+<main class="rm-page">
+<section id="routine-login" class="rm-login" aria-labelledby="routine-login-title">
+<div class="rm-login-mark" aria-hidden="true">✓</div>
+<h1 id="routine-login-title">하루 루틴</h1>
+<p>기존 대시보드와 같은 Google 계정으로 로그인하면 루틴과 체크 기록을 함께 사용해요.</p>
+<button id="routine-google-login" type="button" class="rm-button rm-primary" disabled>Google로 로그인</button>
+<p id="routine-auth-status" class="rm-auth-status" role="status">연결을 확인하고 있어요…</p>
+<button id="routine-auth-retry" type="button" class="rm-button" hidden>다시 연결</button>
+<a href="./">업무 대시보드 열기</a>
+</section>
+<section id="routine-shell" hidden>
+<div id="routine-mobile-root"></div>
+<footer class="rm-account-row"><span id="routine-account"></span><button id="routine-signout" class="rm-button rm-quiet" type="button">로그아웃</button></footer>
+<div class="rm-utility-row"><button id="routine-install" class="rm-button rm-quiet" type="button">홈 화면에 추가하기</button><a href="./" class="rm-button rm-quiet">대시보드 열기</a></div>
+<p id="routine-shell-status" class="rm-auth-status" role="status"></p>
+</section>
+<noscript>하루 루틴을 사용하려면 브라우저의 JavaScript를 켜 주세요.</noscript>
+</main>
+<dialog id="routine-install-dialog" class="rm-dialog" aria-labelledby="routine-install-title">
+<h2 id="routine-install-title">아이폰 홈 화면에 추가</h2>
+<ol><li>Safari에서 이 하루 루틴 화면을 열어요.</li><li>공유 메뉴에서 ‘홈 화면에 추가’를 눌러요.</li><li>이름을 ‘하루 루틴’으로 정하고 추가해요.</li></ol>
+<p>‘웹 앱으로 열기’가 보이면 켜 주세요. 홈 화면 아이콘을 누르면 이 체크 화면이 열립니다.</p>
+<p>처음 열 때 로그인을 요청하면 기존 대시보드와 같은 Google 계정을 선택하세요.</p>
+<button id="routine-install-close" class="rm-button rm-primary" type="button">확인</button>
+</dialog>
+<script src="routines.js?v=mobile-routine"></script>
+<script src="routine-mobile.js?v=mobile-routine"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="routine-app.js?v=mobile-routine"></script>
+</body>
+</html>

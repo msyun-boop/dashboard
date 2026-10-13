@@ -96,3 +96,5 @@
 
 
 .routine-ui dialog form{display:block}.routine-ui button,.routine-ui label,.routine-ui input[type=checkbox],.routine-ui select{cursor:pointer}.routine-ui .rp-save-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.routine-ui .rp-select{font:inherit}.routine-ui .rp-check-label{width:100%}.routine-ui .rp-table th:first-child{min-width:160px}
+
+.routine-ui a.rp-button{text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
