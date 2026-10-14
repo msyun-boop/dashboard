@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const ORIGIN = 'https://msyun-boop.github.io';
-const CURRENT = 'dashboard-v8-mobile-routine';
+const CURRENT = 'dashboard-v9-routine-delete';
 const source = fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8');
 const keyFor = input => new URL(typeof input === 'string' ? input : input.url, ORIGIN).href;
 

@@ -145,11 +145,11 @@ test('weekly counts and comparisons use active routine dates',()=>{
   assert.equal(h.run("routineDiff({pct:50},{pct:25})"),'+25%p');
   assert.equal(h.run("routineDiff({pct:0},{pct:null})"),'비교 기록 없음');
 });
-test('deleting a routine preserves past records and stops future dates',async()=>{
+test('deleting immediately excludes all weeks while preserving internal records',async()=>{
   const h=harness();h.emit();h.run("deleteRoutine('r1')");await settle();
-  assert.equal(h.server.alice.routines.r1.end,'2026-10-13');
+  assert.equal(h.server.alice.routines.r1.end,'2026-10-12');
   assert.equal(h.server.alice.checks['r1_2026-10-06'],true);
-  assert.deepEqual(h.read("routineStats('2026-10-05','r1')"),{done:1,total:7,pct:14});
+  assert.deepEqual(h.read("routineStats('2026-10-05','r1')"),{done:0,total:0,pct:null});
   assert.equal(h.run("routineActive(routineData.routines.r1,'2026-10-13')"),false);
 });
 test('the main dashboard document and other accounts stay untouched',async()=>{
@@ -211,4 +211,72 @@ test('month week labels and actual-day totals remain independent of selection',(
   assert.equal(h.run("routineWeekLabel('2027-01-04')"),'1월 1주차');
   h.run("routineWeek='2026-10-05'");
   assert.deepEqual(h.read("routineDailyStats(routineToday())"),{done:0,total:2,pct:0});
+});
+
+test('deleted routines stay hidden after offline reload and stale snapshots, then sync',async()=>{
+  const h=harness();h.emit();h.fail('unavailable');h.run("deleteRoutine('r1')");await settle();
+  assert.equal(h.backup().pending.routines.r1.deleted,true);
+  const again=harness({backup:h.backup()});again.emit(initial(),true);
+  assert.equal(again.run("routineActive(routineData.routines.r1,'2026-10-06')"),false);
+  again.emit();await settle();
+  assert.equal(again.server.alice.routines.r1.deleted,true);
+  assert.deepEqual(again.server.alice.checks,initial().checks);
+  const reload=harness({data:again.server.alice});reload.emit();
+  for(const week of ['2026-10-05','2026-10-12','2026-10-19']){
+    assert.deepEqual(reload.read("routineStats('"+week+"','r1')"),{done:0,total:0,pct:null});
+    assert.equal(reload.read("routineStats('"+week+"').total"),7);
+  }
+  assert.deepEqual(reload.server.alice.routines.r2,initial().routines.r2);
+});
+test('legacy ended routines are excluded even before their old end date',()=>{
+  const data=initial();data.routines.r1.end='2026-10-13';const h=harness({data});h.emit();
+  assert.deepEqual(h.read("routineStats('2026-10-05')"),{done:0,total:7,pct:0});
+  assert.deepEqual(h.read("routineDailyStats('2026-10-06')"),{done:0,total:1,pct:0});
+  const before=h.read('routineData');
+  assert.equal(h.run("saveRoutineEdit('r1','復活',[0],'2026-10-05')"),false);
+  h.run("checkRoutine('r1','2026-10-06',false);archiveRoutine('r1')");
+  assert.deepEqual(h.read('routineData'),before);assert.equal(h.writes.length,0);
+});
+test('cancel leaves records unchanged and confirmed deletion rerenders immediately',()=>{
+  const h=harness();h.emit();
+  h.run("confirm=()=>false;deleteRoutine('r1')");assert.deepEqual(h.read('routineData'),initial());
+  h.run("confirm=()=>true;let renders=0;window.renderRoutineMobile=()=>renders++;deleteRoutine('r1')");
+  assert.ok(h.run('renders')>0);
+  assert.equal(h.run("routineActive(routineData.routines.r1,routineToday())"),false);
+});
+test('desktop historical table and dashboard summary omit deleted names',()=>{
+  const h=harness();h.emit();h.run("archiveRoutine('r1');routineWeek='2026-10-05'");
+  const nodes=new Map(),node=key=>{
+    if(!nodes.has(key))nodes.set(key,{innerHTML:'',textContent:'',value:'',open:false,
+      style:{setProperty(){}},setAttribute(){},addEventListener(){},
+      querySelector:()=>node(key+'-input'),querySelectorAll:()=>[],
+      close(){this.open=false;}});
+    return nodes.get(key);
+  };
+  const root={innerHTML:'',querySelector:selector=>node(selector),addEventListener(){}};
+  h.context.testRoot=root;
+  h.run('createRoutineView(testRoot)');
+  assert.doesNotMatch(node('[data-role="table-body"]').innerHTML,/독서|삭제됨/);
+  assert.match(node('[data-role="table-body"]').innerHTML,/운동/);
+  const board=node('board');h.context.document.getElementById=id=>id==='routine-board-summary'?board:null;
+  h.run('rRoutineBoard()');assert.doesNotMatch(board.innerHTML,/독서/);assert.match(board.innerHTML,/운동/);
+});
+
+test('mobile cards, list, management and weekly statistics exclude deleted routines',()=>{
+  const h=harness();h.emit();h.run("archiveRoutine('r1')");
+  const nodes=new Map(),node=key=>{
+    if(!nodes.has(key))nodes.set(key,{innerHTML:'',textContent:'',value:'all',open:false,
+      style:{},classList:{toggle(){}},setAttribute(){},addEventListener(){},reset(){},
+      contains:()=>false,querySelectorAll:()=>[],querySelector:()=>node(key+'-child'),
+      close(){this.open=false;}});
+    return nodes.get(key);
+  };
+  const root=node('root');root.querySelector=selector=>node(selector);
+  h.context.document.getElementById=id=>id==='routine-mobile-root'?root:null;
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../routine-mobile.js'),'utf8'),h.context);
+  for(const role of ['card-grid','today-list','manage-list']){
+    assert.doesNotMatch(node('[data-role="'+role+'"]').innerHTML,/독서/);
+    assert.match(node('[data-role="'+role+'"]').innerHTML,/운동/);
+  }
+  assert.equal(node('[data-role="week-count"]').textContent,'0/7회 완료 · 남은 목표 7회');
 });

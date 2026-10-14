@@ -1,12 +1,12 @@
-const CACHE = 'dashboard-v8-mobile-routine';
+const CACHE = 'dashboard-v9-routine-delete';
 const CACHE_PREFIX = 'dashboard-';
 const SCOPE_PATH = '/dashboard/';
 const ASSETS = [
   '/dashboard/index.html',
-  '/dashboard/routines.js?v=mobile-routine',
+  '/dashboard/routines.js?v=routine-delete',
   '/dashboard/routines.css?v=weekly-schedules',
   '/dashboard/routine.html',
-  '/dashboard/routine-mobile.js?v=mobile-routine',
+  '/dashboard/routine-mobile.js?v=routine-delete',
   '/dashboard/routine-mobile.css?v=mobile-routine',
   '/dashboard/routine-app.js?v=mobile-routine',
   '/dashboard/routine-manifest.json',
